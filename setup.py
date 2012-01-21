@@ -11,6 +11,7 @@ setup(
     name = "vault",
     packages = ["vault"],
     scripts = ["vault/vault"],
+    package_data = {"vault": ["qrc_resources/*","translations/*"]},
     data_files = data_files,
     version = "1.0.0",
     description = "GUI application for creating and managing encrypted folders.",
