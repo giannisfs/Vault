@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Vault
+GenericName=Vault
+Comment=GUI application to create and manage encrypted folders
+Exec=vault
+Icon=vault.png
+Terminal=false
+Categories=Utility;
+StartupNotify=false

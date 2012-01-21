@@ -1,0 +1,6 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+<file alias="vault_el.qm">/translations/vault_el.qm</file>
+<file alias="vault.png">/data/vault.png</file>
+</qresource>
+</RCC>
