@@ -1,0 +1,3 @@
+include vault/data/*
+include vault/qrc_resources/*
+include vault/translations/*
