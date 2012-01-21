@@ -27,7 +27,7 @@ setup(
         "Environment :: X11 Applications :: Qt",
         "Natural Language :: English",
         "Natural Language :: Greek",
-        "Intended Audience :: End Users/Desktop",,
+        "Intended Audience :: End Users/Desktop",
         "Topic :: Utilities"],
     long_description = """
 Vault is a GUI application for creating and managing encrypted folders. 
