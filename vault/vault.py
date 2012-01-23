@@ -305,13 +305,23 @@ class Vault(QMainWindow):
     def load_folders(self):
         self.efoldersdata = []
         self.ofoldersdata = []
-        f = open(efolders, 'rb')
+        try:
+            f = open(efolders, 'rb')
+        except IOError:
+            QMessageBox.warning(self, self.tr("Check files"),
+            self.tr('''Check if the file ~/.vault/cache/existing_folders.data exist!
+            Note that vault folder is a hidden folder, press Ctrl+H to see hidden folders.'''))
         try:
             self.efoldersdata = pickle.load(f)
         except (EOFError, IOError):
             pass
         f.close()
-        f = open(ofolders, 'rb')
+        try:
+            f = open(ofolders, 'rb')
+        except IOError:
+            QMessageBox.warning(self, self.tr("Check files"),
+            self.tr('''Check if the file ~/.vault/cache/open_folders.data exist!
+            Note that vault folder is a hidden folder, press Ctrl+H to see hidden folders.'''))
         try:
             self.ofoldersdata = pickle.load(f)
         except (EOFError, IOError):
@@ -328,9 +338,24 @@ class Vault(QMainWindow):
         self.openfoldersListWidget.clear()
         self.openfoldersListWidget.addItems(self.ofoldersdata)
         self.openfoldersListWidget.setCurrentRow(0)
+    
+    def check_for_files(self):
+        path = home + '/' + ".vault/cache"        
+        if not os.path.exists(path):
+            os.makedirs(path)        
+        try:
+            f = open(efolders, 'rb')
+        except IOError:
+            f = open(efolders, 'wb')
+            f.close()
+        try:
+            f = open(ofolders, 'rb')
+        except IOError:
+            f = open(ofolders, 'wb')
+            f.close()
         
     def about(self):
-        link  = ''
+        link  = 'http://clepto.github.com/'
         link += 'Vault'
         QMessageBox.about(self, self.tr("About Vault"), self.tr(
             '''<b> Vault %1 </b>
@@ -343,15 +368,16 @@ class Vault(QMainWindow):
             .arg(PYQT_VERSION_STR).arg(platform.system()))
     
     def report(self):
-        url = ''
+        url = 'http://clepto.github.com/'
         webbrowser.open_new_tab(url)
 
     def getinvolved(self):
-        url = ''
+        url = 'http://clepto.github.com/'
         webbrowser.open_new_tab(url)
         
 def main():
     app = QApplication(sys.argv)
+    app.setWindowIcon(QIcon(':/vault.png'))
     
     locale = QLocale.system().name()
     qtTranslator = QTranslator()
@@ -362,6 +388,7 @@ def main():
         app.installTranslator(appTranslator)
     
     program = Vault()
+    program.check_for_files()
     program.load_folders()
     program.load_lists()
     program.show()
