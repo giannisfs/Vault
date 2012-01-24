@@ -180,9 +180,10 @@ class Vault(QMainWindow):
             stderr=subprocess.STDOUT)
         output = p2.communicate()[0]
         os.remove(tmp)
-        if p2.poll == 0:
-            nautilusfolder = 'nautilus {0}'.format(folderdir)
-            subprocess.call(shlex.split(nautilusfolder))
+        while p2.poll() is None:
+            time.sleep(1)
+        if p2.poll() == 0:
+            subprocess.call(['nautilus', folderdir])
             self.load_folders()
             self.efoldersdata.append(foldername)
             f = open(efolders, 'wb')
@@ -215,8 +216,7 @@ class Vault(QMainWindow):
             QMessageBox.warning(self, self.tr("Something is wrong"),
             self.tr("Something is wrong, check the password again. Also check if the folder is still open.")) 
         else:
-            nautilusfolder = 'nautilus {0}'.format(path)
-            subprocess.call(shlex.split(nautilusfolder))
+            subprocess.call(['nautilus', path])
             self.load_folders()
             self.ofoldersdata.append(foldername)
             f = open(ofolders, 'wb')
@@ -368,11 +368,11 @@ class Vault(QMainWindow):
             .arg(PYQT_VERSION_STR).arg(platform.system()))
     
     def report(self):
-        url = 'http://clepto.github.com/'
+        url = 'https://github.com/Clepto/Vault/issues'
         webbrowser.open_new_tab(url)
 
     def getinvolved(self):
-        url = 'http://clepto.github.com/'
+        url = 'http://clepto.github.com/getinvolved.html'
         webbrowser.open_new_tab(url)
         
 def main():
