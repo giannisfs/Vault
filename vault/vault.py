@@ -52,6 +52,7 @@ except ImportError:
 
 ECHO = "/bin/echo"
 ENCFS = "/usr/bin/encfs"
+ENCFSCTL = "/usr/bin/encfsctl"
 FUSERMOUNT = "/bin/fusermount"
 MOUNT = "/bin/mount"
 home = os.getenv('HOME')
@@ -60,7 +61,7 @@ ofolders = home + '/.vault/cache/open_folders.data'
 
 class Vault(QMainWindow):
     def __init__(self, parent=None):
-        super(Vault, self).__init__(parent)
+        super(Vault, self).__init__(parent)       
         
         tabWidget = QTabWidget()
         
@@ -154,76 +155,86 @@ class Vault(QMainWindow):
         self.connect(involvedAction, SIGNAL("triggered()"), self.getinvolved)
         self.connect(aboutAction, SIGNAL("triggered()"), self.about)
         self.connect(self.continueButton, SIGNAL("clicked()"), self.create_folder)
+        self.connect(self.createLineEdit, SIGNAL("returnPressed()"), self.create_folder)
         self.existingfoldersListWidget.doubleClicked.connect(self.open_folder)
         self.openfoldersListWidget.doubleClicked.connect(self.close_folder)
         self.dexistingfoldersListWidget.doubleClicked.connect(self.delete)
-        
+
     def create_folder(self):
-        foldername = str(self.createLineEdit.text().toUtf8())
-        self.createLineEdit.clear()
-        folderdir = home + '/' + foldername
-        enfolderdir = home + '/' + '.' + foldername
-        if not os.path.exists(folderdir):
-            os.mkdir(folderdir, 0700)
-        if not os.path.exists(enfolderdir):
-            os.mkdir(enfolderdir, 0700)
-        dialog = createpasswd_dlg.createpasswd()
-        if dialog.exec_():
-            pass1 = dialog.createpasswdEdit.text()
-            pass2 = dialog.ccreatepasswdEdit.text()
-        tmp = tempfile.mkstemp()[1]
-        with open(tmp, 'w') as f:
-            f.write(pass1)
-        extpass = "/bin/cat %s" % (tmp)
-        p2 = subprocess.Popen([ENCFS, "--standard","--extpass", extpass, enfolderdir, folderdir],
-            stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-        output = p2.communicate()[0]
-        os.remove(tmp)
-        while p2.poll() is None:
-            time.sleep(1)
-        if p2.poll() == 0:
-            subprocess.call(['nautilus', folderdir])
-            self.load_folders()
-            self.efoldersdata.append(foldername)
-            f = open(efolders, 'wb')
-            pickle.dump(self.efoldersdata, f)
-            f.close()
-            self.ofoldersdata.append(foldername)
-            f = open(ofolders, 'wb')
-            pickle.dump(self.ofoldersdata, f)
-            f.close()
-            self.load_lists()
+        self.foldername = str(self.createLineEdit.text().toUtf8())
+        if self.if_folder_exist() is True:
+            QMessageBox.warning(self, self.tr("Folder already exists"),
+                self.tr("The folder you want to create already exists."))
         else:
-            QMessageBox.warning(self, self.tr("Error"),
-            self.tr("The application encounter an error and the folders weren't created!"))
+            self.createLineEdit.clear()
+            folderdir = home + '/' + self.foldername
+            enfolderdir = home + '/' + '.' + self.foldername
+            if not os.path.exists(folderdir):
+                os.mkdir(folderdir, 0700)
+            if not os.path.exists(enfolderdir):
+                os.mkdir(enfolderdir, 0700)
+            dialog = createpasswd_dlg.createpasswd()
+            if dialog.exec_():
+                self.pass1 = dialog.createpasswdEdit.text()
+                self.pass2 = dialog.ccreatepasswdEdit.text()
+                self.pass_is_empty()                    
+                self.check_pass()
+            tmp = tempfile.mkstemp()[1]
+            with open(tmp, 'w') as f:
+                f.write(self.pass1)
+            extpass = "/bin/cat %s" % (tmp)
+            p2 = subprocess.Popen([ENCFS, "--standard","--extpass", extpass, enfolderdir, folderdir],
+                                  stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT)
+            output = p2.communicate()[0]
+            os.remove(tmp)
+            while p2.poll() is None:
+                time.sleep(1)
+            if p2.poll() == 0:
+                subprocess.call(['nautilus', folderdir])
+                self.load_folders()
+                self.efoldersdata.append(self.foldername)
+                f = open(efolders, 'wb')
+                pickle.dump(self.efoldersdata, f)
+                f.close()
+                self.ofoldersdata.append(self.foldername)
+                f = open(ofolders, 'wb')
+                pickle.dump(self.ofoldersdata, f)
+                f.close()
+                self.load_lists()
+            else:
+                QMessageBox.warning(self, self.tr("Error"),
+                                    self.tr("The application encounter an error and the folders weren't created!"))
        
     def open_folder(self):
         item = self.existingfoldersListWidget.currentItem()
         foldername = item.text()
-        path = home + '/' + foldername
+        self.path = home + '/' + foldername
         enfolder = home + '/' + '.' + foldername
-        if not os.path.exists(path):
-            os.mkdir(path)
-        dialog = passwd_dlg.passwd()
-        if dialog.exec_():
-            passwd = dialog.passwdEdit.text()
-        passwd = dialog.passwdEdit.text() 
-        p1 = subprocess.Popen([ECHO, passwd], stdout=subprocess.PIPE)
-        p2 = subprocess.Popen([ENCFS, "-S", enfolder, path], stdin=p1.stdout, stdout=subprocess.PIPE)
-        p3 = p2.communicate()[0]
-        if p2.poll() is not 0:
-            QMessageBox.warning(self, self.tr("Something is wrong"),
-            self.tr("Something is wrong, check the password again. Also check if the folder is still open.")) 
+        if self.is_mounted_open() is False:
+            if not os.path.exists(self.path):
+                os.mkdir(self.path)
+            dialog = passwd_dlg.passwd()
+            if dialog.exec_():
+                passwd = dialog.passwdEdit.text()
+            p1 = subprocess.Popen([ECHO, passwd], stdout=subprocess.PIPE)
+            p2 = subprocess.Popen([ENCFS, "-S", enfolder, self.path], stdin=p1.stdout, stdout=subprocess.PIPE)
+            p3 = p2.communicate()[0]
+            if p2.poll() is not 0:
+                QMessageBox.warning(self, self.tr("Something is wrong"),
+                                    self.tr("Something is wrong, check the password again. Also check if the folder is still open.")) 
+            else:
+                subprocess.call(['nautilus', self.path])
+                self.load_folders()
+                self.ofoldersdata.append(foldername)
+                f = open(ofolders, 'wb')
+                pickle.dump(self.ofoldersdata, f)
+                f.close()
+                self.load_lists()
         else:
-            subprocess.call(['nautilus', path])
-            self.load_folders()
-            self.ofoldersdata.append(foldername)
-            f = open(ofolders, 'wb')
-            pickle.dump(self.ofoldersdata, f)
-            f.close()
-            self.load_lists()
-            
+            QMessageBox.warning(self, self.tr("Folder is open"), 
+                                self.tr("The folder you want to open is already open."))
+        
     def close_folder(self):
         item = self.openfoldersListWidget.currentItem()
         self.foldername = item.text()
@@ -269,7 +280,7 @@ class Vault(QMainWindow):
         item = self.dexistingfoldersListWidget.currentItem()
         foldername = str(item.text())
         self.delete_folder = home + '/' + foldername
-        self.delete_enfolder = home + '/' + '.' + foldername 
+        self.delete_enfolder = home + '/' + '.' + foldername
         if self.is_mounted() is False:
             if self.dmpointdCheckBox.isChecked():
                 try:
@@ -291,6 +302,23 @@ class Vault(QMainWindow):
             QMessageBox.warning(self, self.tr("The folder is mounted!"),
             self.tr("If you want to delete this folder, you must close it first!"))
             
+    def check_pass(self):
+        while self.pass1 != self.pass2:
+            dialog = createpasswd_dlg.createpasswd()
+            dialog.label3.setVisible(1)
+            if dialog.exec_():
+                self.pass1 = dialog.createpasswdEdit.text()
+                self.pass2 = dialog.ccreatepasswdEdit.text()
+                
+    def pass_is_empty(self):
+        while len(self.pass1) is 0 or len(self.pass2) is 0:
+            dialog = createpasswd_dlg.createpasswd()
+            dialog.label4.setVisible(1)
+            if dialog.exec_():
+                self.pass1 = self.createpasswdEdit.text()
+                self.pass2 = self.ccreatepasswdEdit.text()
+            
+            
     def is_mounted(self):
         p = subprocess.Popen([MOUNT], stdout=subprocess.PIPE)
         p = p.communicate()[0]
@@ -301,6 +329,31 @@ class Vault(QMainWindow):
                 return True
             else:
                 return False
+    
+    def is_mounted_open(self):
+        p = subprocess.Popen([MOUNT], stdout=subprocess.PIPE)
+        p = p.communicate()[0]
+        p = p.split("\n")
+        r = re.compile("^encfs on %s type fuse" % self.path)
+        for l in p:
+            if r.match(l):
+                return True
+            else:
+                return False
+                
+    def if_folder_exist(self):
+        self.folders_names = []    
+        f = open(efolders, 'rb')
+        try:
+            self.folders_names = pickle.load(f)
+        except (EOFError, IOError):
+            pass
+        f.close()
+        for i in self.folders_names:
+            if i == self.foldername:
+                return False
+            else:
+                return True
         
     def load_folders(self):
         self.efoldersdata = []
@@ -359,7 +412,10 @@ class Vault(QMainWindow):
         link += 'Vault'
         QMessageBox.about(self, self.tr("About Vault"), self.tr(
             '''<b> Vault %1 </b>
-            <p>Create and manage encrypted folders using encfs.
+            <p>Vault is a GUI application written in Python and PyQt 
+            <p>that make use encfs (see man encfs for more details)
+            <p>and give the user the ability to create and manage 
+            <p>encrypted folders.
             <p><a href="%2">Vault</a>
             <p>Copyright &copy; Chris Triantafillis  
             <br>License: GNU GPL3
