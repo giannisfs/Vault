@@ -162,7 +162,7 @@ class Vault(QMainWindow):
 
     def create_folder(self):
         self.foldername = str(self.createLineEdit.text().toUtf8())
-        if self.if_folder_exist() is True:
+        if self.folder_exist() is True:
             QMessageBox.warning(self, self.tr("Folder already exists"),
                 self.tr("The folder you want to create already exists."))
         else:
@@ -177,7 +177,6 @@ class Vault(QMainWindow):
             if dialog.exec_():
                 self.pass1 = dialog.createpasswdEdit.text()
                 self.pass2 = dialog.ccreatepasswdEdit.text()
-                self.pass_is_empty()                    
                 self.check_pass()
             tmp = tempfile.mkstemp()[1]
             with open(tmp, 'w') as f:
@@ -211,7 +210,7 @@ class Vault(QMainWindow):
         foldername = item.text()
         self.path = home + '/' + foldername
         enfolder = home + '/' + '.' + foldername
-        if self.is_mounted_open() is False:
+        if self.is_mounted(self.path) is False:
             if not os.path.exists(self.path):
                 os.mkdir(self.path)
             dialog = passwd_dlg.passwd()
@@ -281,7 +280,7 @@ class Vault(QMainWindow):
         foldername = str(item.text())
         self.delete_folder = home + '/' + foldername
         self.delete_enfolder = home + '/' + '.' + foldername
-        if self.is_mounted() is False:
+        if self.is_mounted(self.delete_folder) is False:
             if self.dmpointdCheckBox.isChecked():
                 try:
                     shutil.rmtree(self.delete_folder, True)
@@ -308,40 +307,22 @@ class Vault(QMainWindow):
             dialog.label3.setVisible(1)
             if dialog.exec_():
                 self.pass1 = dialog.createpasswdEdit.text()
-                self.pass2 = dialog.ccreatepasswdEdit.text()
-                
-    def pass_is_empty(self):
-        while len(self.pass1) is 0 or len(self.pass2) is 0:
-            dialog = createpasswd_dlg.createpasswd()
-            dialog.label4.setVisible(1)
-            if dialog.exec_():
-                self.pass1 = self.createpasswdEdit.text()
-                self.pass2 = self.ccreatepasswdEdit.text()
-            
-            
-    def is_mounted(self):
-        p = subprocess.Popen([MOUNT], stdout=subprocess.PIPE)
-        p = p.communicate()[0]
-        p = p.split("\n")
-        r = re.compile("^encfs on %s type fuse" % self.delete_folder)
-        for l in p:
-            if r.match(l):
-                return True
-            else:
-                return False
+                self.pass2 = dialog.ccreatepasswdEdit.text()     
     
-    def is_mounted_open(self):
+    def is_mounted(self, path):
+        """Test if a folder is mounted"""
         p = subprocess.Popen([MOUNT], stdout=subprocess.PIPE)
         p = p.communicate()[0]
         p = p.split("\n")
-        r = re.compile("^encfs on %s type fuse" % self.path)
+        
+        r = re.compile("^encfs on %s type fuse" % path)
         for l in p:
             if r.match(l):
                 return True
-            else:
-                return False
+        return False
+        
                 
-    def if_folder_exist(self):
+    def folder_exist(self):
         self.folders_names = []    
         f = open(efolders, 'rb')
         try:
@@ -350,10 +331,10 @@ class Vault(QMainWindow):
             pass
         f.close()
         for i in self.folders_names:
-            if i == self.foldername:
-                return False
-            else:
+            if i in self.folders_names:
                 return True
+            else:
+                return False
         
     def load_folders(self):
         self.efoldersdata = []
