@@ -48,7 +48,15 @@ if not (py_version >= '2.6' and py_version < '3'):
 try:
     import PyQt4
 except ImportError:
-    exit('Error: You need PyQt4 to run this program.') 
+    exit('Error: You need PyQt4 to run this program.')
+
+
+try :
+    subprocess.call(["xdg-open"],stdout=open(os.devnull,'w'),stderr=subprocess.STDOUT)
+
+except OSError:
+	exit('Please install package xdg-utils.\n On Debian Systems do : \n\n \tsudo apt-get install xdg-utils \n\n See more at http://portland.freedesktop.org/ ')
+
 
 ECHO = "/bin/echo"
 ENCFS = "/usr/bin/encfs"
@@ -190,7 +198,7 @@ class Vault(QMainWindow):
             while p2.poll() is None:
                 time.sleep(1)
             if p2.poll() == 0:
-                subprocess.call(['nautilus', folderdir])
+                subprocess.call(['xdg-open', folderdir])
                 self.load_folders()
                 self.efoldersdata.append(self.foldername)
                 f = open(efolders, 'wb')
@@ -223,7 +231,7 @@ class Vault(QMainWindow):
                 QMessageBox.warning(self, self.tr("Something is wrong"),
                                     self.tr("Something is wrong, check the password again. Also check if the folder is still open.")) 
             else:
-                subprocess.call(['nautilus', self.path])
+                subprocess.call(['xdg-open', self.path])
                 self.load_folders()
                 self.ofoldersdata.append(foldername)
                 f = open(ofolders, 'wb')
